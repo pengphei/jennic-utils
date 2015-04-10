@@ -36,8 +36,8 @@ typedef enum
 
 typedef int (*func_jnwrap_init_t)(int para0, int para1);
 typedef int (*func_jnwrap_pre_t)(void);
-typedef int (*func_jnwrap_talk_t)(ezb_ll_msg_t stype, u_int8_t sheaderlen, u_int8_t *psheader, u_int8_t sdatalen, u_int8_t *psdata,
-                   pezb_ll_msg_t prtype, u_int8_t *prlen, u_int8_t *prbuf, int timeout);
+typedef int (*func_jnwrap_talk_t)(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, int offset, u_int8_t sdatalen, u_int8_t *psdata,
+                   u_int8_t *prlen, u_int8_t *prbuf);
 typedef int (*func_jnwrap_fini_t)();
 
 typedef struct

@@ -94,13 +94,14 @@ static int _ftdi_perpare(void)
 }
 
 static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, int offset, u_int8_t sdatalen, u_int8_t *psdata,
-                   u_int8_t *prlen, u_int8_t *prbuf, int timeout)
+                   u_int8_t *prlen, u_int8_t *prbuf)
 {
     _pst_ftdi_dc_t pdc = gpdc;
     struct ftdi_context* fcontext = &pdc->context;
     unsigned char msg_crc = 0;
     int msg_idx = 0;
     int msg_len = 3;
+    int ii = 0;
 
     if( NULL != paddr)
     {
@@ -128,12 +129,12 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
     // msg type
     ftdi_cache[msg_idx++] = stype;
     // msg addr
-    if(NULL != addr)
+    if(NULL != paddr)
     {
-        ftdi_cache[msg_idx++] = 0xFF & addr;
-        ftdi_cache[msg_idx++] = 0xFF & (addr>>8);
-        ftdi_cache[msg_idx++] = 0xFF & (addr>>16);
-        ftdi_cache[msg_idx++] = 0xFF & (addr>>24);
+        ftdi_cache[msg_idx++] = 0xFF & *paddr;
+        ftdi_cache[msg_idx++] = 0xFF & (*paddr>>8);
+        ftdi_cache[msg_idx++] = 0xFF & (*paddr>>16);
+        ftdi_cache[msg_idx++] = 0xFF & (*paddr>>24);
     }
 
     // move data offset
@@ -146,14 +147,14 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
     // msg data payload
     if(0 != sdatalen)
     {
-        for(int ii=0; ii<sdatalen; ii++)
+        for(ii=0; ii<sdatalen; ii++)
         {
             ftdi_cache[msg_idx++] = psdata[ii];
         }
     }
 
     //crc
-    for(int ii=0; ii<(msg_idx); ii++)
+    for(ii=0; ii<(msg_idx); ii++)
     {
         msg_crc ^= ftdi_cache[ii];
     }
