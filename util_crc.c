@@ -100,14 +100,15 @@ int util_debug_buf(char* ptip, unsigned char* pbuf, int len)
 {
     int ii = 0;
 
-    printf("\n%s: \n", ptip);
+    printf("\n%s:", ptip);
     for(ii=0; ii<len; ii++)
     {
-        printf("%02x ", pbuf[ii]);
-        if(0 == len%8)
+        if(0 == ii%8)
         {
             printf("\n");
         }
+
+        printf("%02x ", pbuf[ii]);
     }
     printf("\n\n");
     return 0;
