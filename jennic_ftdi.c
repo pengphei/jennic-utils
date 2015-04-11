@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ftdi.h>
+#include "util_crc.h"
 #include "jennic_core.h"
 
 typedef struct
@@ -62,13 +63,6 @@ static int _ftdi_init(int reset_io, int spimiso_io)
         return -1;
     }
 
-    // reset and clear buffer
-    ftdi_usb_reset(fcontext);
-    ftdi_usb_purge_buffers(fcontext);
-    ftdi_usb_purge_buffers(fcontext);
-
-    ftdi_read_data(fcontext, ftdi_cache, 1024);
-
     pdc->init_flag = 1;
 
     return 0;
@@ -88,14 +82,30 @@ static int _ftdi_perpare(void)
         return -1;
     }
 
+    // reset and clear buffer
+    ftdi_usb_reset(fcontext);
+    ftdi_usb_purge_buffers(fcontext);
+    ftdi_usb_purge_buffers(fcontext);
+
+    ftdi_read_data(fcontext, ftdi_cache, 1024);
+
+    // reset board, enter programing mode
     ftdi_enable_bitbang(fcontext, bit_mask_0);
     ftdi_write_data(fcontext, &bit_data, 1);
-    usleep(400000);
+    usleep(200000);
     ftdi_disable_bitbang(fcontext);
     ftdi_enable_bitbang(fcontext, bit_mask_1);
     ftdi_write_data(fcontext, &bit_data, 1);
-    usleep(400000);
+    usleep(200000);
     ftdi_disable_bitbang(fcontext);
+
+    //clear crap
+    ftdi_usb_reset(fcontext);
+    ftdi_set_baudrate(fcontext, 38400);
+    ftdi_set_line_property(fcontext, BITS_8, STOP_BIT_1,NONE);
+    ftdi_setrts(fcontext, 1);
+    ftdi_setflowctrl(fcontext, SIO_RTS_CTS_HS);
+    ftdi_setrts(fcontext, 0);
     return 0;
 }
 
@@ -173,6 +183,8 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
 
     ftdi_cache[msg_idx++] = msg_crc;
 
+    util_debug_buf("sendbuf:", ftdi_cache, msg_idx);
+
     if(NULL != prtype)
     {
         unsigned char rlen = 0;
@@ -190,7 +202,6 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
 
         ans_len = rlen;
         rlen = ftdi_read_data(fcontext, ftdi_cache, ans_len);
-
         if(rlen != ans_len)
         {
             printf("ftdi: data reading lengh %d != answer length %d \n", rlen, ans_len);
@@ -203,16 +214,19 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
             return -1;
         }
 
+        ans_len = ans_len - 1;
+
         if(*prlen >= ans_len)
         {
-            memcpy(prbuf, ftdi_cache, ans_len);
+            memcpy(prbuf, &ftdi_cache[1], ans_len);
             *prlen = ans_len;
         }
         else
         {
-            memcpy(prbuf, ftdi_cache, *prlen);
+            memcpy(prbuf, &ftdi_cache[1], *prlen);
             printf("ftdi: msg 0x%x, rbuf len: %d, msg len: %d, buffer overflow \n", stype, *prlen, ans_len);
         }
+        util_debug_buf("readbuf:", prbuf, *prlen);
     }
     else
     {
@@ -283,8 +297,9 @@ int jennic_ftdi_main(void)
 
     _ftdi_init(6,7);
     _ftdi_perpare();
+    jennic_select_flash();
 
-    _test_ftdi();
+    //_test_ftdi();
 
 
     _ftdi_fini();

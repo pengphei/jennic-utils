@@ -88,3 +88,20 @@ unsigned char util_crc8_by_table(unsigned char* ucs, unsigned char ucslen, unsig
     }
     return crc;
 }
+
+int util_debug_buf(char* ptip, unsigned char* pbuf, int len)
+{
+    int ii = 0;
+
+    printf("\n%s: \n", ptip);
+    for(ii=0; ii<len; ii++)
+    {
+        printf("%02x ", pbuf[ii]);
+        if(0 == len%8)
+        {
+            printf("\n");
+        }
+    }
+    printf("\n\n");
+    return 0;
+}
