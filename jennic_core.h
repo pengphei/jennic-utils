@@ -51,10 +51,15 @@ typedef struct
 
 void jennic_wrapper_init(pstjn_wrapper_t pwrapper);
 
-int jennic_select_flash();
+int jennic_select_flash(void);
 int jennic_change_baudrate(int baudrate);
+int jennic_write_ram(u_int32_t addr, u_int8_t wlen, u_int8_t* pwbuf);
 int jennic_read_ram(u_int32_t addr, u_int16_t len, u_int8_t* prlen, u_int8_t* prbuf);
+int jennic_run_ram(u_int32_t addr);
 int jennic_write_flash(u_int32_t addr, u_int8_t wlen, u_int8_t* pwbuf);
 int jennic_read_flash(u_int32_t addr, u_int16_t len, u_int8_t* prlen, u_int8_t* prbuf);
+int jennic_erase_flash(void);
+int jennic_erase_flash_sector(u_int8_t sector);
+int jennic_set_flash_register(u_int8_t status);
 int jennic_get_chip_id(u_int32_t* pid);
 #endif
