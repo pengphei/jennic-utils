@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2015 Focalcrest, Ltd. All rights reserved.
+ *
+ * Author(s):
+ *     Phil Han <phil@focalcrest.com>
+ */
+
 #ifndef _JENNIC_CORE_H_
-#define _JEIINC_CORE_H_
+#define _JENNIC_CORE_H_
 
 #include <sys/types.h>
 

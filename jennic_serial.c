@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2015 Focalcrest, Ltd. All rights reserved.
+ *
+ * Author(s):
+ *     Phil Han <phil@focalcrest.com>
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include "jennic_core.h"
@@ -8,7 +15,7 @@ static int _serial_init(int param1, int param2)
 }
 
 
-static int _serial_perpare(void)
+static int _serial_prepare(void)
 {
     return 0;
 }
@@ -29,7 +36,7 @@ int jennic_serial_init(void)
     stjn_wrapper_t wrapper =
     {
         .init = _serial_init,
-        .prepare = _serial_perpare,
+        .prepare = _serial_prepare,
         .talk = _serial_talk,
         .fini = _serial_fini,
     };
@@ -40,5 +47,5 @@ int jennic_serial_init(void)
 
 int jennic_serial_main(void)
 {
-
+    return 0;
 }
