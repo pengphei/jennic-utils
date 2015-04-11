@@ -68,7 +68,7 @@ static int _ftdi_init(int reset_io, int spimiso_io)
     return 0;
 }
 
-static int _ftdi_perpare(void)
+static int _ftdi_prepare(void)
 {
     _pst_ftdi_dc_t pdc = gpdc;
     struct ftdi_context* fcontext = &pdc->context;
@@ -268,7 +268,7 @@ int _test_ftdi()
         gpdc->spimiso_io = ii;
 
         printf("spimiso = %d \n", ii);
-        _ftdi_perpare();
+        _ftdi_prepare();
 
         jennic_select_flash();
 
@@ -282,7 +282,7 @@ int jennic_ftdi_init(void)
     stjn_wrapper_t wrapper =
     {
         .init = _ftdi_init,
-        .prepare = _ftdi_perpare,
+        .prepare = _ftdi_prepare,
         .talk = _ftdi_talk,
         .fini = _ftdi_fini,
     };
@@ -293,11 +293,14 @@ int jennic_ftdi_init(void)
 
 int jennic_ftdi_main(void)
 {
+    u_int32_t chipid = 0;
     jennic_ftdi_init();
 
     _ftdi_init(6,7);
-    _ftdi_perpare();
+    _ftdi_prepare();
     jennic_select_flash();
+
+    jennic_get_chip_id(&chipid);
 
     //_test_ftdi();
 
