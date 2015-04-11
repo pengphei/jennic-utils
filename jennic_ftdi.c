@@ -246,20 +246,6 @@ static int _ftdi_fini()
     return 0;
 }
 
-int jennic_ftdi_init(void)
-{
-    stjn_wrapper_t wrapper =
-    {
-        .init = _ftdi_init,
-        .prepare = _ftdi_perpare,
-        .talk = _ftdi_talk,
-        .fini = _ftdi_fini,
-    };
-
-    jennic_wrapper_init(&wrapper);
-    return 0;
-}
-
 int _test_ftdi()
 {
     int ii = 0;
@@ -277,7 +263,21 @@ int _test_ftdi()
     return 0;
 }
 
-int main()
+int jennic_ftdi_init(void)
+{
+    stjn_wrapper_t wrapper =
+    {
+        .init = _ftdi_init,
+        .prepare = _ftdi_perpare,
+        .talk = _ftdi_talk,
+        .fini = _ftdi_fini,
+    };
+
+    jennic_wrapper_init(&wrapper);
+    return 0;
+}
+
+int jennic_ftdi_main(void)
 {
     jennic_ftdi_init();
 
