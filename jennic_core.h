@@ -9,10 +9,10 @@ typedef enum
     E_ZB_CMD_FLASH_ERASE_REQUEST                = 0x07,
     E_ZB_CMD_FLASH_ERASE_RESPONSE				= 0x08,
     E_ZB_CMD_FLASH_PROGRAM_REQUEST				= 0x09,
-    E_ZB_CMD_FLASH_PROGRAM_RESPONSE			= 0x0a,
-    E_ZB_CMD_FLASH_READ_REQUEST				= 0x0b,
+    E_ZB_CMD_FLASH_PROGRAM_RESPONSE			    = 0x0a,
+    E_ZB_CMD_FLASH_READ_REQUEST				    = 0x0b,
     E_ZB_CMD_FLASH_READ_RESPONSE				= 0x0c,
-    E_ZB_CMD_FLASH_SECTOR_ERASE_REQUEST		= 0x0d,
+    E_ZB_CMD_FLASH_SECTOR_ERASE_REQUEST		    = 0x0d,
     E_ZB_CMD_FLASH_SECTOR_ERASE_RESPONSE		= 0x0e,
     E_ZB_CMD_FLASH_WRITE_STATUS_REGISTER_REQUEST= 0x0f,
     E_ZB_CMD_FLASH_WRITE_STATUS_REGISTER_RESPONSE= 0x10,
@@ -36,8 +36,9 @@ typedef enum
 
 typedef int (*func_jnwrap_init_t)(int para0, int para1);
 typedef int (*func_jnwrap_pre_t)(void);
-typedef int (*func_jnwrap_talk_t)(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, int offset, u_int8_t sdatalen, u_int8_t *psdata,
-                   u_int8_t *prlen, u_int8_t *prbuf);
+typedef int (*func_jnwrap_talk_t)(ezb_ll_msg_t stype, pezb_ll_msg_t prtype,
+                                  u_int32_t* paddr, u_int16_t mlen, u_int8_t sdatalen,
+                                  u_int8_t *psdata, u_int8_t *prlen, u_int8_t *prbuf);
 typedef int (*func_jnwrap_fini_t)();
 
 typedef struct
@@ -50,4 +51,10 @@ typedef struct
 
 void jennic_wrapper_init(pstjn_wrapper_t pwrapper);
 
+int jennic_select_flash();
+int jennic_change_baudrate(int baudrate);
+int jennic_read_ram(u_int32_t addr, u_int16_t len, u_int8_t* prlen, u_int8_t* prbuf);
+int jennic_write_flash(u_int32_t addr, u_int8_t wlen, u_int8_t* pwbuf);
+int jennic_read_flash(u_int32_t addr, u_int16_t len, u_int8_t* prlen, u_int8_t* prbuf);
+int jennic_get_chip_id(u_int32_t* pid);
 #endif

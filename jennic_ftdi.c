@@ -33,11 +33,17 @@ static int _ftdi_init(int reset_io, int spimiso_io)
 {
     _pst_ftdi_dc_t pdc = gpdc;
     struct ftdi_context* fcontext = &pdc->context;
-    pdc->reset_io = reset_io;
-    pdc->spimiso_io = spimiso_io;
-
     int ii = 0;
     int dev_num = sizeof(usb_vps)/sizeof(_stusb_vp_t);
+
+    if(1 == pdc->init_flag)
+    {
+        printf("ftdi: already inited \n");
+        return 0;
+    }
+
+    pdc->reset_io = reset_io;
+    pdc->spimiso_io = spimiso_io;
 
     ftdi_init(fcontext);
 
@@ -84,16 +90,16 @@ static int _ftdi_perpare(void)
 
     ftdi_enable_bitbang(fcontext, bit_mask_0);
     ftdi_write_data(fcontext, &bit_data, 1);
-    usleep(40000);
+    usleep(400000);
     ftdi_disable_bitbang(fcontext);
     ftdi_enable_bitbang(fcontext, bit_mask_1);
     ftdi_write_data(fcontext, &bit_data, 1);
-    usleep(40000);
+    usleep(400000);
     ftdi_disable_bitbang(fcontext);
     return 0;
 }
 
-static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, int offset, u_int8_t sdatalen, u_int8_t *psdata,
+static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, u_int16_t mlen, u_int8_t sdatalen, u_int8_t *psdata,
                    u_int8_t *prlen, u_int8_t *prbuf)
 {
     _pst_ftdi_dc_t pdc = gpdc;
@@ -103,12 +109,18 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
     int msg_len = 3;
     int ii = 0;
 
+    if(0 == pdc->init_flag)
+    {
+        printf("ftdi: not inited \n");
+        return -1;
+    }
+
     if( NULL != paddr)
     {
         msg_len += 4;
     }
 
-    if(0 != offset)
+    if(0 != mlen)
     {
         msg_len += 2;
     }
@@ -138,10 +150,10 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
     }
 
     // move data offset
-    if(0 != offset)
+    if(0 != mlen)
     {
-        ftdi_cache[msg_idx++] = 0xFF & offset;
-        ftdi_cache[msg_idx++] = 0xFF & (offset>>8);
+        ftdi_cache[msg_idx++] = 0xFF & mlen;
+        ftdi_cache[msg_idx++] = 0xFF & (mlen>>8);
     }
 
     // msg data payload
@@ -187,18 +199,25 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
 
         if(ftdi_cache[0] != *prtype)
         {
-            printf("ftdi: read type %02x, require type %02x", ftdi_cache[0], *prtype);
+            printf("ftdi: read type 0x%02x, require type 0x%02x \n", ftdi_cache[0], *prtype);
             return -1;
         }
 
-        memcpy(prbuf, ftdi_cache, ans_len);
-        *prlen = ans_len;
+        if(*prlen >= ans_len)
+        {
+            memcpy(prbuf, ftdi_cache, ans_len);
+            *prlen = ans_len;
+        }
+        else
+        {
+            memcpy(prbuf, ftdi_cache, *prlen);
+            printf("ftdi: msg 0x%x, rbuf len: %d, msg len: %d, buffer overflow \n", stype, *prlen, ans_len);
+        }
     }
     else
     {
         ftdi_write_data(fcontext, ftdi_cache, msg_idx);
     }
-
 
     return 0;
 }
@@ -210,11 +229,20 @@ static int _ftdi_fini()
     unsigned char bit_mask_reset = (unsigned char)(1 << gpdc->reset_io);
     unsigned char msg_byte = 0x00;
 
+    if(0 == pdc->init_flag)
+    {
+        printf("ftdi: not inited \n");
+        return -1;
+    }
+
     ftdi_enable_bitbang(fcontext, bit_mask_reset);
     ftdi_write_data(fcontext, &msg_byte, 1);
     usleep(1000000);
     ftdi_disable_bitbang(fcontext);
     ftdi_usb_close(fcontext);
+
+    memset(pdc, 0, sizeof(_st_ftdi_dc_t));
+
     return 0;
 }
 
@@ -232,24 +260,33 @@ int jennic_ftdi_init(void)
     return 0;
 }
 
-int main()
+int _test_ftdi()
 {
     int ii = 0;
-    jennic_ftdi_init();
-
-    _ftdi_init(5,7);
-    _ftdi_perpare();
-
-
     for(ii=0; ii<9; ii++)
     {
-        gpdc->reset_io = ii;
+        gpdc->spimiso_io = ii;
 
         printf("spimiso = %d \n", ii);
         _ftdi_perpare();
 
-        sleep(1);
-    }
+        jennic_select_flash();
 
+        sleep(3);
+    }
+    return 0;
+}
+
+int main()
+{
+    jennic_ftdi_init();
+
+    _ftdi_init(6,7);
+    _ftdi_perpare();
+
+    _test_ftdi();
+
+
+    _ftdi_fini();
     return 0;
 }
