@@ -8,6 +8,8 @@
 #ifndef JENNIC_FTDI_H
 #define JENNIC_FTDI_H
 
+#include <sys/types.h>
+
 int jennic_ftdi_init(int reset_io, int spimiso_io);
 int jennic_ftdi_prepare(void);
 int jennic_ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype,

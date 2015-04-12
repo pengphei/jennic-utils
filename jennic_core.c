@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#if 0
+#if 1
 #define JENNIC_CORE_DEBUG
 #else
 #define JENNIC_CORE_DEBUG printf
@@ -271,6 +271,7 @@ int jennic_erase_flash(void)
     u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, NULL, 0, 0, NULL, &rlen, rbuf))
     {
+        printf("jennic: erase flash failed!, error 0x%02x \n", rbuf[0]);
         return -1;
     }
 
@@ -318,8 +319,6 @@ int jennic_get_chip_id(u_int32_t* pid)
         return -1;
     }
 
-    JENNIC_CORE_DEBUG("jennic: chip id read len = %d \n", rlen);
-
     if(0 != rbuf[0])
     {
         return rbuf[0];
@@ -327,10 +326,13 @@ int jennic_get_chip_id(u_int32_t* pid)
 
     *pid = rbuf[1] << 24 | rbuf[2] << 16 | rbuf[3] << 8 | rbuf[4];
 
-    JENNIC_CORE_DEBUG("jennic: get chip id 0x%08x \n", *pid);
-
     return 0;
 }
+
+static u_int32_t jn5139_mac_addrs[2] = {0x00000010, 0x00000010};
+static u_int32_t jn5142_mac_addrs[2] = {0x00000010, 0x00000010};
+static u_int32_t jn5148_mac_addrs[2] = {0x00000010, 0x00000010};
+static u_int32_t jn516X_mac_addrs[2] = {0x01001580, 0x01001570};
 
 int jennic_read_mac(u_int8_t pmac[], ejennic_chip_t chip, int busermac)
 {
@@ -339,29 +341,63 @@ int jennic_read_mac(u_int8_t pmac[], ejennic_chip_t chip, int busermac)
     {
         case JN_CHIP_JN5139:
         {
-            u_int32_t mac_addr[] = {0x00000010, 0x00000010};
-            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            jennic_read_ram(jn5139_mac_addrs[busermac], 8, &mac_len, pmac);
             break;
         }
 
         case JN_CHIP_JN5142:
         {
-            u_int32_t mac_addr[] = {0x00000010, 0x00000010};
-            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            jennic_read_ram(jn5142_mac_addrs[busermac], 8, &mac_len, pmac);
             break;
         }
 
         case JN_CHIP_JN5148:
         {
-            u_int32_t mac_addr[] = {0x00000010, 0x00000010};
-            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            jennic_read_ram(jn5148_mac_addrs[busermac], 8, &mac_len, pmac);
             break;
         }
 
         case JN_CHIP_JN516X:
         {
-            u_int32_t mac_addr[] = {0x01001580, 0x01001570};
-            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            jennic_read_ram(jn516X_mac_addrs[busermac], 8, &mac_len, pmac);
+            break;
+        }
+        default:
+        {
+            printf("jennic: reading mac failed, unknown chip type! \n");
+            break;
+        }
+    }
+    return 0;
+}
+
+
+int jennic_write_mac(u_int8_t pmac[], ejennic_chip_t chip)
+{
+    u_int8_t mac_len = 8;
+    switch(chip)
+    {
+        case JN_CHIP_JN5139:
+        {
+            jennic_write_ram(jn5139_mac_addrs[1], mac_len, pmac);
+            break;
+        }
+
+        case JN_CHIP_JN5142:
+        {
+            jennic_write_ram(jn5142_mac_addrs[1], mac_len, pmac);
+            break;
+        }
+
+        case JN_CHIP_JN5148:
+        {
+            jennic_write_ram(jn5148_mac_addrs[1], mac_len, pmac);
+            break;
+        }
+
+        case JN_CHIP_JN516X:
+        {
+            jennic_write_ram(jn516X_mac_addrs[1], mac_len, pmac);
             break;
         }
         default:

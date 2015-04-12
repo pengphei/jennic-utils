@@ -11,7 +11,7 @@
 #include "util_crc.h"
 #include "jennic_core.h"
 
-#if 0
+#if 1
 #define JENNIC_FTDI_DEBUG
 #else
 #define JENNIC_FTDI_DEBUG printf
@@ -196,7 +196,7 @@ int jennic_ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr,
 
     ftdi_cache[msg_idx++] = msg_crc;
 
-    util_debug_buf("sendbuf:", ftdi_cache, msg_idx);
+    //util_debug_buf("sendbuf", ftdi_cache, msg_idx);
 
     if(NULL != prtype)
     {
@@ -215,7 +215,7 @@ int jennic_ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr,
 
         ans_len = rlen;
         rlen = ftdi_read_data(fcontext, ftdi_cache, ans_len);
-        printf("read len %d, ans len %d \n", rlen, ans_len);
+
         if(rlen != ans_len)
         {
             printf("ftdi: data reading lengh %d != answer length %d \n", rlen, ans_len);
@@ -240,7 +240,7 @@ int jennic_ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr,
             memcpy(prbuf, &ftdi_cache[1], *prlen);
             printf("ftdi: msg 0x%x, rbuf len: %d, msg len: %d, buffer overflow \n", stype, *prlen, ans_len);
         }
-        util_debug_buf("readbuf:", prbuf, *prlen);
+        //util_debug_buf("readbuf", prbuf, *prlen);
     }
     else
     {

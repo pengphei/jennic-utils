@@ -79,4 +79,5 @@ int jennic_erase_flash_sector(u_int8_t sector);
 int jennic_set_flash_register(u_int8_t status);
 int jennic_get_chip_id(u_int32_t* pid);
 int jennic_read_mac(u_int8_t pmac[8], ejennic_chip_t chip, int busermac);
+int jennic_write_mac(u_int8_t pmac[8], ejennic_chip_t chip);
 #endif
