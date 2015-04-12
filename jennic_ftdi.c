@@ -11,6 +11,12 @@
 #include "util_crc.h"
 #include "jennic_core.h"
 
+#if 0
+#define JENNIC_FTDI_DEBUG
+#else
+#define JENNIC_FTDI_DEBUG printf
+#endif
+
 typedef struct
 {
     int vendor;
@@ -37,7 +43,7 @@ static _pst_ftdi_dc_t gpdc = &gdc;
 
 static unsigned char ftdi_cache[2048];
 
-static int _ftdi_init(int reset_io, int spimiso_io)
+int jennic_ftdi_init(int reset_io, int spimiso_io)
 {
     _pst_ftdi_dc_t pdc = gpdc;
     struct ftdi_context* fcontext = &pdc->context;
@@ -75,7 +81,7 @@ static int _ftdi_init(int reset_io, int spimiso_io)
     return 0;
 }
 
-static int _ftdi_prepare(void)
+int jennic_ftdi_prepare(void)
 {
     _pst_ftdi_dc_t pdc = gpdc;
     struct ftdi_context* fcontext = &pdc->context;
@@ -116,7 +122,7 @@ static int _ftdi_prepare(void)
     return 0;
 }
 
-static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, u_int16_t mlen, u_int8_t sdatalen, u_int8_t *psdata,
+int jennic_ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr, u_int16_t mlen, u_int8_t sdatalen, u_int8_t *psdata,
                    u_int8_t *prlen, u_int8_t *prbuf)
 {
     _pst_ftdi_dc_t pdc = gpdc;
@@ -209,6 +215,7 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
 
         ans_len = rlen;
         rlen = ftdi_read_data(fcontext, ftdi_cache, ans_len);
+        printf("read len %d, ans len %d \n", rlen, ans_len);
         if(rlen != ans_len)
         {
             printf("ftdi: data reading lengh %d != answer length %d \n", rlen, ans_len);
@@ -243,7 +250,7 @@ static int _ftdi_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype, u_int32_t* paddr
     return 0;
 }
 
-static int _ftdi_fini()
+int jennic_ftdi_fini()
 {
     _pst_ftdi_dc_t pdc = gpdc;
     struct ftdi_context* fcontext = &pdc->context;
@@ -267,51 +274,4 @@ static int _ftdi_fini()
     return 0;
 }
 
-int _test_ftdi()
-{
-    int ii = 0;
-    for(ii=0; ii<9; ii++)
-    {
-        gpdc->spimiso_io = ii;
 
-        printf("spimiso = %d \n", ii);
-        _ftdi_prepare();
-
-        jennic_select_flash();
-
-        sleep(3);
-    }
-    return 0;
-}
-
-int jennic_ftdi_init(void)
-{
-    stjn_wrapper_t wrapper =
-    {
-        .init = _ftdi_init,
-        .prepare = _ftdi_prepare,
-        .talk = _ftdi_talk,
-        .fini = _ftdi_fini,
-    };
-
-    jennic_wrapper_init(&wrapper);
-    return 0;
-}
-
-int jennic_ftdi_main(void)
-{
-    u_int32_t chipid = 0;
-    jennic_ftdi_init();
-
-    _ftdi_init(6,7);
-    _ftdi_prepare();
-    jennic_select_flash();
-
-    jennic_get_chip_id(&chipid);
-
-    //_test_ftdi();
-
-
-    _ftdi_fini();
-    return 0;
-}
