@@ -12,6 +12,14 @@
 
 typedef enum
 {
+    JN_CHIP_JN5139,
+    JN_CHIP_JN5142,
+    JN_CHIP_JN5148,
+    JN_CHIP_JN516X
+} ejennic_chip_t;
+
+typedef enum
+{
     /* cmds referring to firmware updating */
     E_ZB_CMD_FLASH_ERASE_REQUEST                = 0x07,
     E_ZB_CMD_FLASH_ERASE_RESPONSE               = 0x08,
@@ -57,6 +65,8 @@ typedef struct
 
 void jennic_wrapper_init(pstjn_wrapper_t pwrapper);
 
+int jennic_init(int para0, int para1);
+int jennic_fini(void);
 int jennic_select_flash(void);
 int jennic_change_baudrate(int baudrate);
 int jennic_write_ram(u_int32_t addr, u_int8_t wlen, u_int8_t* pwbuf);
@@ -68,4 +78,5 @@ int jennic_erase_flash(void);
 int jennic_erase_flash_sector(u_int8_t sector);
 int jennic_set_flash_register(u_int8_t status);
 int jennic_get_chip_id(u_int32_t* pid);
+int jennic_read_mac(u_int8_t pmac[8], ejennic_chip_t chip, int busermac);
 #endif

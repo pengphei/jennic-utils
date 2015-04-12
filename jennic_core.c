@@ -9,6 +9,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#if 0
+#define JENNIC_CORE_DEBUG
+#else
+#define JENNIC_CORE_DEBUG printf
+#endif
+
 typedef struct
 {
     unsigned char jennic_id;
@@ -53,7 +59,7 @@ static inline int _jn_init(int para0, int para1)
     return _gp_wrapper->init(para0, para1);
 }
 
-static inline int _jn_prepare()
+static inline int _jn_prepare(void)
 {
     return _gp_wrapper->prepare();
 }
@@ -66,17 +72,29 @@ static inline int _jn_talk(ezb_ll_msg_t stype, pezb_ll_msg_t prtype,
 }
 
 
-static inline int _jn_fini()
+static inline int _jn_fini(void)
 {
     return _gp_wrapper->fini();
+}
+
+int jennic_init(int para0, int para1)
+{
+    _jn_init(para0, para1);
+    _jn_prepare();
+    return 0;
+}
+
+int jennic_fini(void)
+{
+    return _jn_fini();
 }
 
 int jennic_identify_flash(_pst_jennic_flash_t pflash)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_READ_ID_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_READ_ID_RESPONSE;
-    u_int8_t rbuf[10];
-    u_int8_t rlen = 10;
+    u_int8_t rbuf[16];
+    u_int8_t rlen = 16;
 
     if(0 == _jn_talk(stype, &rtype, NULL, 0, 0, NULL, &rlen, rbuf))
     {
@@ -106,7 +124,7 @@ int jennic_identify_flash(_pst_jennic_flash_t pflash)
             *pflash = _unknown_jennic_flash;
         }
 
-        printf("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor,
+        JENNIC_CORE_DEBUG("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor,
                pflash->type, pflash->jennic_id);
         return 0;
     }
@@ -121,7 +139,7 @@ int jennic_select_flash(void)
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_SELECT_TYPE_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_SELECT_TYPE_RESPONSE;
     unsigned char sbuf = 0;
-    unsigned char rbuf[10];
+    unsigned char rbuf[16];
     u_int8_t rlen = sizeof(rbuf);
 
     _st_jennic_flash_t jennic_flash;
@@ -148,7 +166,7 @@ int jennic_select_flash(void)
         }
     }
 
-    printf("jennic: could not select detected flash type 0x%02x \n", sbuf);
+    JENNIC_CORE_DEBUG("jennic: could not select detected flash type 0x%02x \n", sbuf);
 
     return -1;
 }
@@ -158,8 +176,8 @@ int jennic_change_baudrate(int baudrate)
     ezb_ll_msg_t stype = E_ZB_CMD_SET_BAUD_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_SET_BAUD_RESPONSE;
     u_int8_t bd = (u_int8_t)1000000/baudrate;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, NULL, 0, 1, &bd, &rlen, rbuf))
     {
         return -1;
@@ -172,8 +190,8 @@ int jennic_write_ram(u_int32_t addr, u_int8_t wlen, u_int8_t* pwbuf)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_RAM_WRITE_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_RAM_WRITE_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, &addr, 0, wlen, pwbuf, &rlen, rbuf))
     {
         return -1;
@@ -185,15 +203,27 @@ int jennic_read_ram(u_int32_t addr, u_int16_t len, u_int8_t* prlen, u_int8_t* pr
 {
     ezb_ll_msg_t stype = E_ZB_CMD_RAM_READ_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_RAM_READ_RESPONSE;
-    return _jn_talk(stype, &rtype, &addr, len, 0, NULL, prlen, prbuf);
+    u_int8_t rlen = 255;
+    u_int8_t rbuf[255];
+    if(0 != _jn_talk(stype, &rtype, &addr, len, 0, NULL, &rlen, rbuf))
+    {
+        return -1;
+    }
+
+    rlen = rlen - 1;
+
+    *prlen = *prlen >= rlen ? rlen:*prlen;
+    memcpy(prbuf, &rbuf[1], *prlen);
+
+    return rbuf[0];
 }
 
 int jennic_run_ram(u_int32_t addr)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_RAM_RUN_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_RAM_RUN_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, &addr, 0, 0, NULL, &rlen, rbuf))
     {
         return -1;
@@ -205,8 +235,8 @@ int jennic_write_flash(u_int32_t addr, u_int8_t wlen, u_int8_t* pwbuf)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_PROGRAM_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_PROGRAM_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, &addr, 0, wlen, pwbuf, &rlen, rbuf))
     {
         return -1;
@@ -218,15 +248,27 @@ int jennic_read_flash(u_int32_t addr, u_int16_t len, u_int8_t* prlen, u_int8_t* 
 {
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_READ_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_READ_RESPONSE;
-    return _jn_talk(stype, &rtype, &addr, len, 0, NULL, prlen, prbuf);
+    u_int8_t rlen = 255;
+    u_int8_t rbuf[255];
+    if(0 != _jn_talk(stype, &rtype, &addr, len, 0, NULL, &rlen, rbuf))
+    {
+        return -1;
+    }
+
+    rlen = rlen - 1;
+
+    *prlen = *prlen >= rlen ? rlen:*prlen;
+    memcpy(prbuf, &rbuf[1], *prlen);
+
+    return rbuf[0];
 }
 
 int jennic_erase_flash(void)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_ERASE_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_ERASE_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, NULL, 0, 0, NULL, &rlen, rbuf))
     {
         return -1;
@@ -239,10 +281,10 @@ int jennic_erase_flash_sector(u_int8_t sector)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_ERASE_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_ERASE_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
 
-    if(0 != jn_talk(stype, &rtype, NULL, 0, 1, &sector, &rlen, rbuf))
+    if(0 != _jn_talk(stype, &rtype, NULL, 0, 1, &sector, &rlen, rbuf))
     {
         return -1;
     }
@@ -254,10 +296,10 @@ int jennic_set_flash_register(u_int8_t status)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_FLASH_WRITE_STATUS_REGISTER_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_FLASH_WRITE_STATUS_REGISTER_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
 
-    if(0 != jn_talk(stype, &rtype, NULL, 0, 1, &status, &rlen, rbuf))
+    if(0 != _jn_talk(stype, &rtype, NULL, 0, 1, &status, &rlen, rbuf))
     {
         return -1;
     }
@@ -269,14 +311,14 @@ int jennic_get_chip_id(u_int32_t* pid)
 {
     ezb_ll_msg_t stype = E_ZB_CMD_GET_CHIPID_REQUEST;
     ezb_ll_msg_t rtype = E_ZB_CMD_GET_CHIPID_RESPONSE;
-    u_int8_t rlen = 10;
-    u_int8_t rbuf[10];
+    u_int8_t rlen = 16;
+    u_int8_t rbuf[16];
     if(0 != _jn_talk(stype, &rtype, NULL, 0, 0, NULL, &rlen, rbuf))
     {
         return -1;
     }
 
-    printf("jennic: chip id read len = %d \n", rlen);
+    JENNIC_CORE_DEBUG("jennic: chip id read len = %d \n", rlen);
 
     if(0 != rbuf[0])
     {
@@ -285,10 +327,48 @@ int jennic_get_chip_id(u_int32_t* pid)
 
     *pid = rbuf[1] << 24 | rbuf[2] << 16 | rbuf[3] << 8 | rbuf[4];
 
-    printf("jennic: get chip id 0x%08x \n", *pid);
+    JENNIC_CORE_DEBUG("jennic: get chip id 0x%08x \n", *pid);
 
     return 0;
 }
 
+int jennic_read_mac(u_int8_t pmac[], ejennic_chip_t chip, int busermac)
+{
+    u_int8_t mac_len = 8;
+    switch(chip)
+    {
+        case JN_CHIP_JN5139:
+        {
+            u_int32_t mac_addr[] = {0x00000010, 0x00000010};
+            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            break;
+        }
 
+        case JN_CHIP_JN5142:
+        {
+            u_int32_t mac_addr[] = {0x00000010, 0x00000010};
+            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            break;
+        }
 
+        case JN_CHIP_JN5148:
+        {
+            u_int32_t mac_addr[] = {0x00000010, 0x00000010};
+            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            break;
+        }
+
+        case JN_CHIP_JN516X:
+        {
+            u_int32_t mac_addr[] = {0x01001580, 0x01001570};
+            jennic_read_ram(mac_addr[busermac], 8, &mac_len, pmac);
+            break;
+        }
+        default:
+        {
+            printf("jennic: reading mac failed, unknown chip type! \n");
+            break;
+        }
+    }
+    return 0;
+}
