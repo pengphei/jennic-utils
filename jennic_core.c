@@ -79,9 +79,16 @@ static inline int _jn_fini(void)
 
 int jennic_init(int para0, int para1)
 {
-    _jn_init(para0, para1);
-    _jn_prepare();
-    return 0;
+    int ret = 0;
+    ret = _jn_init(para0, para1);
+
+    if(0 != ret)
+    {
+        return -1;
+    }
+
+    ret = _jn_prepare();
+    return ret;
 }
 
 int jennic_fini(void)
@@ -124,7 +131,7 @@ int jennic_identify_flash(_pst_jennic_flash_t pflash)
             *pflash = _unknown_jennic_flash;
         }
 
-        JENNIC_CORE_DEBUG("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor,
+        JENNIC_CORE_DEBUG("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor, \
                pflash->type, pflash->jennic_id);
         return 0;
     }

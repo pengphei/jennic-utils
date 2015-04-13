@@ -268,6 +268,7 @@ int jennic_ftdi_fini()
     usleep(1000000);
     ftdi_disable_bitbang(fcontext);
     ftdi_usb_close(fcontext);
+    ftdi_deinit(fcontext);
 
     memset(pdc, 0, sizeof(_st_ftdi_dc_t));
 

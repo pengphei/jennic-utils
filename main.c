@@ -30,13 +30,15 @@ typedef struct
     int verify_flag;
     int init_baudrate;
     int prog_baudrate;
-    int show_flag;
+    int info_flag;
     int reset_io;
     int spimiso_io;
     u_int64_t* pmac_addr;
 
     char *connection;
     char *firmware;
+    char *serial;
+    char *platform;
 
     u_int8_t* fw_image;
     int fw_fd;
@@ -45,9 +47,16 @@ typedef struct
 static _stmain_dc_t gdc;
 static _pstmain_dc_t gpdc = &gdc;
 
-static u_int8_t prog_cache[0x80];
 static const size_t prog_unit_size = 0x80;
 static u_int64_t g_mac_addr = 0;
+
+static int _jennic_program(char* image);
+static int _jennic_verify(pstzb_firmware_t pfirm);
+static int _util_serial_init(char *argv[]);
+static int _util_ftdi_init(char *argv[]);
+static int _util_usage(char *argv[]);
+static int _util_options_parse(int argc, char *argv[]);
+static int _util_options_process(char *argv[]);
 
 static int _jennic_program(char* image)
 {
@@ -117,9 +126,9 @@ static int _jennic_verify(pstzb_firmware_t pfirm)
 }
 
 
-static int _util_serial_init(void)
+static int _util_serial_init(char *argv[])
 {
-    //serial wrapper init
+    _pstmain_dc_t pdc = gpdc;
     stjn_wrapper_t wrapper =
     {
         .init = jennic_serial_init,
@@ -128,12 +137,31 @@ static int _util_serial_init(void)
         .fini = jennic_serial_fini,
     };
 
+    if(0 != strcmp(pdc->platform, "loftq"))
+    {
+        printf("Error: serial connection is not supported for %s platform! \n", pdc->platform);
+        _util_usage(argv);
+    }
+
+    if(NULL==pdc->serial)
+    {
+        printf("Error: please specify serial port for serial connection! \n");
+        _util_usage(argv);
+    }
+
+    // serial wrapper init
     jennic_wrapper_init(&wrapper);
+
+    if(0 != jennic_init((int)pdc->serial, pdc->init_baudrate))
+    {
+        printf("Error: jennic serial init failed! \n");
+        _util_usage(argv);
+    }
 
     return 0;
 }
 
-static int _util_ftdi_init(void)
+static int _util_ftdi_init(char *argv[])
 {
     _pstmain_dc_t pdc = gpdc;
     stjn_wrapper_t wrapper =
@@ -144,36 +172,51 @@ static int _util_ftdi_init(void)
         .fini = jennic_ftdi_fini,
     };
 
+    if(0 != strcmp(pdc->platform, "pc"))
+    {
+        printf("Error: ftdi connection is not supported for %s platform! \n", pdc->platform);
+        _util_usage(argv);
+    }
+
+    // ftdi wrapper init
     jennic_wrapper_init(&wrapper);
 
-    jennic_init(pdc->reset_io, pdc->spimiso_io);
+    if(0 != jennic_init(pdc->reset_io, pdc->spimiso_io))
+    {
+        printf("Error: jennic ftdi init failed for %s ! \n", pdc->platform);
+        _util_usage(argv);
+    }
     // select flash
     jennic_select_flash();
     return 0;
 }
 
 
-static void _util_usage(char *argv[])
+static int _util_usage(char *argv[])
 {
+    fprintf(stderr, "\n");
     fprintf(stderr, "Usage: %s\n", argv[0]);
     fprintf(stderr, "  Arguments:\n");
-    fprintf(stderr, "    -c --connection    <type>          connection implementation (ftdi, serial, ipv6), Default: serial. \n");
+    fprintf(stderr, "    -P --platform      <platform>      platform working on (pc, loftq), Default: pc. \n");
+    fprintf(stderr, "    -C --connection    <type>          connection implementation (ftdi, serial, ipv6), Default: serial. \n");
+    fprintf(stderr, "    -S --serial        <tty*>          serial port for connecting of serial Default: /dev/ttyS0. \n");
     fprintf(stderr, "  Options:\n");
     fprintf(stderr, "    -a --address       <address>       start reading at address, Default at 0x00000000. \n");
     fprintf(stderr, "    -l --len           <length>        number of bytes to read, Default is 192000. \n");
-    fprintf(stderr, "    -V --verbosity     <verbosity>     Verbosity level. Increses amount of debug information. Default 0. \n");
-    fprintf(stderr, "    -I --initialbaud   <rate>          Set initial baud rate. \n");
-    fprintf(stderr, "    -P --programbaud   <rate>          Set programming baud rate. \n");
+    fprintf(stderr, "    -v --verbosity     <verbosity>     Verbosity level. Increses amount of debug information. Default 0. \n");
+    fprintf(stderr, "    -b --initialbaud   <rate>          Set initial baud rate. \n");
+    fprintf(stderr, "    -p --programbaud   <rate>          Set programming baud rate. \n");
     fprintf(stderr, "    -f --firmware      <firmware>      Load module flash with the given firmware file. \n");
     fprintf(stderr, "    -v --verify                        Verify image. If specified, verify the image programmed was loaded correctly.\n");
     fprintf(stderr, "    -m --mac           <MAC Address>   Set MAC address of device. If this is not specified, the address is read from flash. \n");
-    fprintf(stderr, "    -s --show                          show mac address, chip id. \n");
-    fprintf(stderr, "    -R --reset-pin     <PIN Number>    pin number of reset line for ftdi-type connections (default=6). \n");
-    fprintf(stderr, "    -S --spimiso-pin   <PIN Number>    pin number of spimiso line for ftdi-type connections (default=7). \n");
+    fprintf(stderr, "    -i --info                          show info of mac address, chip id. \n");
+    fprintf(stderr, "    -r --reset-pin     <PIN Number>    pin number of reset line for ftdi-type connections (default=6). \n");
+    fprintf(stderr, "    -s --spimiso-pin   <PIN Number>    pin number of spimiso line for ftdi-type connections (default=7). \n");
     exit(EXIT_FAILURE);
+    return 0;
 }
 
-static void _util_options_parse(int argc, char *argv[])
+static int _util_options_parse(int argc, char *argv[])
 {
     _pstmain_dc_t pdc = gpdc;
     signed char opt;
@@ -182,18 +225,20 @@ static void _util_options_parse(int argc, char *argv[])
     static struct option long_options[] =
     {
         {"help",                    no_argument,        NULL,       'h'},
-        {"connection",              required_argument,  NULL,       'c'},
+        {"platform",                required_argument,  NULL,       'P'},
+        {"connection",              required_argument,  NULL,       'C'},
+        {"serial",                  required_argument,  NULL,       'S'},
         {"address",                 required_argument,  NULL,       'a'},
         {"len",                     required_argument,  NULL,       'l'},
-        {"verbosity",               required_argument,  NULL,       'V'},
-        {"initialbaud",             required_argument,  NULL,       'I'},
-        {"programbaud",             required_argument,  NULL,       'P'},
-        {"show",                    no_argument,        NULL,       's'},
+        {"verbosity",               optional_argument,  NULL,       'v'},
+        {"initialbaud",             optional_argument,  NULL,       'b'},
+        {"programbaud",             optional_argument,  NULL,       'p'},
         {"firmware",                required_argument,  NULL,       'f'},
-        {"verify",                  no_argument,        NULL,       'v'},
+        {"Verify",                  no_argument,        NULL,       'V'},
         {"mac",                     required_argument,  NULL,       'm'},
-        {"reset-pin",               required_argument,  NULL,       'R'},
-        {"spimiso-pin",             required_argument,  NULL,       'S'},
+        {"info",                    no_argument,        NULL,       'i'},
+        {"reset-pin",               required_argument,  NULL,       'r'},
+        {"spimiso-pin",             required_argument,  NULL,       's'},
         { NULL, 0, NULL, 0}
     };
 
@@ -201,7 +246,7 @@ static void _util_options_parse(int argc, char *argv[])
     pdc->spimiso_io = -1;
     pdc->reset_io = -1;
 
-    while((opt = getopt_long(argc, argv, "hc:al:f:vI:P:m:s", long_options, &option_index)) != -1)
+    while((opt = getopt_long(argc, argv, "hP:C:S:a:l:v:b:p:f:Vm:ir:s:", long_options, &option_index)) != -1)
     {
         switch (opt)
         {
@@ -209,8 +254,18 @@ static void _util_options_parse(int argc, char *argv[])
             case 'h':
                 _util_usage(argv);
                 break;
-            case 'c':
+            case 'P':
+                pdc->platform = optarg;
+                break;
+            case 'C':
                 pdc->connection = optarg;
+                break;
+            case 'S':
+                pdc->serial = optarg;
+                break;
+            case 'a':
+                break;
+            case 'l':
                 break;
             case 'f':
                 pdc->firmware = optarg;
@@ -221,10 +276,10 @@ static void _util_options_parse(int argc, char *argv[])
             case 'v':
                 pdc->verify_flag = 1;
                 break;
-            case 's':
-                pdc->show_flag = 1;
+            case 'i':
+                pdc->info_flag = 1;
                 break;
-            case 'I':
+            case 'b':
             {
                 char *pcEnd;
                 errno = 0;
@@ -242,7 +297,7 @@ static void _util_options_parse(int argc, char *argv[])
                 }
                 break;
             }
-            case 'P':
+            case 'p':
             {
                 char *pcEnd;
                 errno = 0;
@@ -264,69 +319,74 @@ static void _util_options_parse(int argc, char *argv[])
                 g_mac_addr = strtoll(optarg, (char **) NULL, 16);
                 pdc->pmac_addr = &g_mac_addr;
                 break;
-            case 'R':
+            case 'r':
                 pdc->reset_io = atoi(optarg);
                 if(pdc->reset_io < -1 || pdc->reset_io >= 8)
                 {
                     printf("Reset io number '%d' is invalid! it varies from 0-7! \n", pdc->reset_io);
-                    exit(-1);
+                   _util_usage(argv);
                 }
                 break;
-            case 'S':
+            case 's':
                 pdc->spimiso_io = atoi(optarg);
                 if(pdc->spimiso_io < -1 || pdc->spimiso_io >= 8)
                 {
                     printf("Spimiso io number '%d' is invalid! it varies from 0-7! \n", pdc->spimiso_io);
-                    exit(-1);
+                    _util_usage(argv);
                 }
                 break;
 
             default: /* '?' */
+                printf("Error: invalid options %s! \n", optarg);
                 _util_usage(argv);
+                break;
         }
     }
 
     pdc->reset_io = (-1 == pdc->reset_io) ? 6 : pdc->reset_io;
     pdc->spimiso_io = (-1 == pdc->spimiso_io) ? 7 : pdc->spimiso_io;
+
+    return 0;
 }
 
 static int _util_options_process(char *argv[])
 {
     _pstmain_dc_t pdc = gpdc;
 
-    if(NULL == pdc->connection)
+    if(NULL == pdc->platform || NULL == pdc->connection)
     {
+        printf("Error: please specify platform or connection! \n");
         _util_usage(argv);
     }
     else
     {
         if(0 == strcmp(pdc->connection, "serial"))
         {
-            _util_serial_init();
+            _util_serial_init(argv);
         }
         else if(0 == strcmp(pdc->connection, "ftdi"))
         {
-            _util_ftdi_init();
+            _util_ftdi_init(argv);
         }
         else if(0 == strcmp(pdc->connection, "ipv6"))
         {
-            printf("ipv6 has not been implemented! \n");
-            exit(0);
+            printf("Error: ipv6 has not been implemented! \n");
+            _util_usage(argv);
         }
         else
         {
+            printf("Error: %s is not supported on %s ! \n", pdc->connection, pdc->platform);
             _util_usage(argv);
         }
     }
 
-    if(1 == pdc->show_flag)
+    if(1 == pdc->info_flag)
     {
         u_int8_t mac[8];
         u_int32_t chipid;
         // get chip id
         jennic_get_chip_id(&chipid);
         printf("Chip ID: %08x \n", chipid);
-
         // read mac
         jennic_read_mac(mac, JN_CHIP_JN516X, 0);
         util_debug_buf("default mac", mac, sizeof(mac));
@@ -347,7 +407,7 @@ static int _util_options_process(char *argv[])
         else
         {
             printf("Firmware %s doesn't exists! \n", pdc->firmware);
-            exit(-1);
+            _util_usage(argv);
         }
     }
 
