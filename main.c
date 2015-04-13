@@ -6,16 +6,19 @@
  */
 
 #include <stdlib.h>
+#include <fcntl.h>
 #include <string.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <errno.h>
 #include <stdarg.h>
-
+#include <sys/stat.h>
 #include <sys/select.h>
+#include <sys/mman.h>
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "jennic_extra.h"
 #include "jennic_core.h"
 #include "jennic_ftdi.h"
 #include "jennic_serial.h"
@@ -34,6 +37,9 @@ typedef struct
 
     char *connection;
     char *firmware;
+
+    u_int8_t* fw_image;
+    int fw_fd;
 }_stmain_dc_t, *_pstmain_dc_t;
 
 static _stmain_dc_t gdc;
@@ -45,37 +51,67 @@ static u_int64_t g_mac_addr = 0;
 
 static int _jennic_program(char* image)
 {
+    _pstmain_dc_t pdc = gpdc;
+    stzb_firmware_t firm;
+    struct stat fstate;
     int ii = 0;
-    long int image_size = 0;
+
     int image_block_num = 0;
     int image_block_left = 0;
     u_int32_t flash_addr = 0x00000000;
+    u_int8_t* image_addr = NULL;
 
-    FILE* fd = fopen(image, "rb");
+    pdc->fw_fd = open(image, O_RDONLY);
 
-    if(NULL == fd)
+    if(0 == pdc->fw_fd)
     {
         return -1;
     }
 
     // get image size
-    fseek(fd, 0, SEEK_END);
-    image_size = ftell(fd);
+    if(-1 == fstat(pdc->fw_fd, &fstate))
+    {
+        perror("Could not stat file! \n");
+        return -1;
+    }
 
-    fseek(fd, 0, SEEK_SET);
+    firm.u32ImageLength = (u_int32_t)fstate.st_size;
 
-    image_block_num = image_size/prog_unit_size;
-    image_block_left = image_size%prog_unit_size;
+    pdc->fw_image = mmap(NULL, fstate.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, pdc->fw_fd, 0);
+
+    if(MAP_FAILED == pdc->fw_image)
+    {
+        perror("could not map file! \n");
+        return -1;
+    }
+
+    jennic_pring_fw_info(pdc->fw_image, &firm);
+
+    image_addr = firm.pu8ImageData;
+    image_block_num = fstate.st_size/prog_unit_size;
+    image_block_left = fstate.st_size%prog_unit_size;
+
+    printf("\n");
 
     for(ii=0; ii<image_block_num; ii++)
     {
-        fread(prog_cache, prog_unit_size, 1, fd);
-        jennic_write_flash(flash_addr, (u_int8_t)prog_unit_size, prog_cache);
+        jennic_write_flash(flash_addr, (u_int8_t)prog_unit_size, image_addr);
         flash_addr += prog_unit_size;
+        image_addr += prog_unit_size;
+        printf("%c[Aprograming progress %d%% \n",0x1B, ii*100/image_block_num);
     }
 
-    fread(prog_cache, image_block_left, 1, fd);
-    jennic_write_flash(flash_addr, (u_int8_t)image_block_left, prog_cache);
+    jennic_write_flash(flash_addr, (u_int8_t)image_block_left, image_addr);
+    printf("%c[Aprograming progress 100%% \n", 0x1B);
+
+    munmap(pdc->fw_image, firm.u32ImageLength);
+    close(pdc->fw_fd);
+
+    return 0;
+}
+
+static int _jennic_verify(pstzb_firmware_t pfirm)
+{
 
     return 0;
 }
