@@ -18,7 +18,7 @@ and the building commands as below:
    
   scons
 
-Usabe
+Usage
 ------------
 
 .. code-block:: sh
