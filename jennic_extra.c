@@ -101,6 +101,7 @@ int jennic_pring_fw_info(u_int8_t *pfirmware, pstzb_firmware_t pfirm)
     printf("u32ROMVersion:         0x%08x\n", pfirm->u32ROMVersion);
     printf("u32DataSectionInfo:    0x%08x\n", ntohl(ph2->u32DataSectionInfo));
     printf("u32TextSectionLength:  0x%08x\n", (((ntohl(ph2->u32DataSectionInfo)) & 0x0000FFFF) * 4));
-
+    printf("u32WakeUpEntryPoint :  0x%08x\n", pfirm->u32WakeUpEntryPoint);
+    printf("u32ResetEntryPoint :   0x%08x\n", pfirm->u32ResetEntryPoint);
     return 0;
 }
