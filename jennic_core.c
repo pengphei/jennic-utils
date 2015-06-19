@@ -140,8 +140,7 @@ int jennic_identify_flash(_pst_jennic_flash_t pflash)
             *pflash = _unknown_jennic_flash;
         }
 
-        JENNIC_CORE_DEBUG("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor, \
-               pflash->type, pflash->jennic_id);
+        JENNIC_CORE_DEBUG("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor, pflash->type, pflash->jennic_id);
         return 0;
     }
     else

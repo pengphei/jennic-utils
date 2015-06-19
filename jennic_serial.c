@@ -311,7 +311,7 @@ static int _uart_read_ext(u_int8_t* pbuf, int buflen, int *prnum, int timeout)
             ret = read(pdc->handle, (u_int8_t*)pbuf, buflen);
             if(ret > 0)
             {
-                JENNIC_SERIAL_DEBUG("[uart]: get 0x%02x %c (rnum = %d) \n", *pbuf, *pbuf, ret);
+                //JENNIC_SERIAL_DEBUG("[uart]: get 0x%02x %c (rnum = %d) \n", *pbuf, *pbuf, ret);
                 *prnum = ret;
             }
             else

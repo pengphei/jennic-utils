@@ -21,7 +21,12 @@ Import('env')
 inc = ['#']
 dst = "jennic-ctrl"
 src = env.Glob('*.c')
-lib = ['ftdi', 'rt']
+lib = []
+
+if env["platform"] == "pc":
+    env["CCFLAGS"] = "-Wall -O2 -DJENNIC_FTDI_ENABLE"
+    env["LDFLAGS"] = "-static"
+    lib = ['ftdi']
 
 jennic_ctrl = env.Program(target=dst, source=src, LIBS=lib, CPPPATH=inc)
 Return("jennic_ctrl")

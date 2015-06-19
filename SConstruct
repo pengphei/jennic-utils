@@ -16,17 +16,25 @@
 
 import os
 
-env = Environment()
-#EXE_PATH = '../loftq-build/toolschain/gcc-linaro/bin'
-#PREFIX = '../loftq-build/toolschain/gcc-linaro/bin/arm-linux-gnueabi-'
+platform = ARGUMENTS.get('platform','pc')  
+
 EXE_PATH = ''
 PREFIX = ''
-env["CC"] = PREFIX + 'gcc'    
+
+if platform == 'arm':
+    EXE_PATH = '../buildroot/output/host/usr/bin'
+    PREFIX = EXE_PATH+ '/arm-linux-gnueabihf-'
+else:
+    pass
+
+env = Environment()
+    
+env["CC"] = PREFIX + 'gcc'      
 env["AS"] = PREFIX + 'gcc'    
 env["AR"] = PREFIX + 'ar'    
 env["LINK"] = PREFIX + 'gcc' 
-env["CCFLAGS"] = "-Wall -O2"
-env["LDFLAGS"] = "-static"
+env["platform"] = platform
+
 env.PrependENVPath ('PATH', EXE_PATH)
 
 Export("env")

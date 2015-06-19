@@ -32,6 +32,8 @@
 #include "jennic_ftdi.h"
 #include "jennic_serial.h"
 #include "util_crc.h"
+#include "util_globot.h"
+#include "util_loftq.h"
 
 typedef struct
 {
@@ -146,15 +148,17 @@ static int _util_serial_init(char *argv[])
         .fini = jennic_serial_fini,
     };
 
-    if(0 != strcmp(pdc->platform, "loftq"))
+    if(0 == strcmp(pdc->platform, "loftq"))
+    {
+        util_loftq_prepare();
+    }
+    else if(0 == strcmp(pdc->platform, "globot"))
+    {
+        util_globot_prepare();
+    }
+    else
     {
         printf("Error: serial connection is not supported for %s platform! \n", pdc->platform);
-        _util_usage(argv);
-    }
-
-    if(NULL==pdc->serial)
-    {
-        printf("Error: please specify serial port for serial connection! \n");
         _util_usage(argv);
     }
 
@@ -170,6 +174,7 @@ static int _util_serial_init(char *argv[])
     return 0;
 }
 
+#ifdef JENNIC_FTDI_ENABLE
 static int _util_ftdi_init(char *argv[])
 {
     _pstmain_dc_t pdc = gpdc;
@@ -199,7 +204,7 @@ static int _util_ftdi_init(char *argv[])
     jennic_select_flash();
     return 0;
 }
-
+#endif
 
 static int _util_usage(char *argv[])
 {
@@ -373,10 +378,12 @@ static int _util_options_process(char *argv[])
         {
             _util_serial_init(argv);
         }
+        #ifdef JENNIC_FTDI_ENABLE
         else if(0 == strcmp(pdc->connection, "ftdi"))
         {
             _util_ftdi_init(argv);
         }
+        #endif
         else if(0 == strcmp(pdc->connection, "ipv6"))
         {
             printf("Error: ipv6 has not been implemented! \n");

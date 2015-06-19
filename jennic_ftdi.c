@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright (C) 2015 Focalcrest, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#ifdef JENNIC_FTDI_ENABLE
 
 #include <stdio.h>
 #include <string.h>
@@ -284,4 +287,4 @@ int jennic_ftdi_fini()
     return 0;
 }
 
-
+#endif
