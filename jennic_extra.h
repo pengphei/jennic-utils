@@ -37,6 +37,6 @@ typedef struct
     u_int8_t*    pu8TextData;                    /**< Pointer to loaded .text section for RAM */
 } stzb_firmware_t, *pstzb_firmware_t;
 
-int jennic_pring_fw_info(u_int8_t *pfirmware, pstzb_firmware_t pfirm);
+int jennic_print_fw_info(u_int8_t *pfirmware, pstzb_firmware_t pfirm);
 
 #endif // JENNIC_EXTRA_H

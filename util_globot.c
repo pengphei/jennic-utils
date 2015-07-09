@@ -3,11 +3,11 @@
 
 #include <unistd.h>
 
+static char reset_io[] = "PB6";
+static char spimiso_io[] = "PB2";
+
 int util_globot_prepare()
 {
-    char reset_io[] = "PB6";
-    char spimiso_io[] = "PB2";
-
     sunxi_gpio_init();
 
     // export gpios
@@ -30,3 +30,14 @@ int util_globot_prepare()
 
     return 0;
 }
+
+int util_globot_finalize()
+{
+    sunxi_gpio_init();
+    sunxi_gpio_export(reset_io);
+    sunxi_gpio_enable_out(reset_io);
+    sunxi_gpio_set_out(reset_io, 0);
+    sunxi_gpio_fini();
+    return 0;
+}
+

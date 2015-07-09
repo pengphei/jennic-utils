@@ -2,11 +2,11 @@
 #include "util_gpio.h"
 #include <unistd.h>
 
+static char reset_io[] = "PC3";
+static char spimiso_io[] = "PG16";
+
 int util_loftq_prepare()
 {
-    char reset_io[] = "PC3";
-    char spimiso_io[] = "PG16";
-
     sunxi_gpio_init();
 
     // export gpios
@@ -26,6 +26,16 @@ int util_loftq_prepare()
 
     sunxi_gpio_set_out(spimiso_io, 1);
 
+    sunxi_gpio_fini();
+    return 0;
+}
+
+int util_loftq_finalize()
+{
+    sunxi_gpio_init();
+    sunxi_gpio_export(reset_io);
+    sunxi_gpio_enable_out(reset_io);
+    sunxi_gpio_set_out(reset_io, 0);
     sunxi_gpio_fini();
     return 0;
 }

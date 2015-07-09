@@ -64,7 +64,9 @@ static u_int64_t g_mac_addr = 0;
 static int _jennic_program(char* image);
 static int _jennic_verify(pstzb_firmware_t pfirm);
 static int _util_serial_init(char *argv[]);
+static int _util_serial_fini(char *argv[]);
 static int _util_ftdi_init(char *argv[]);
+static int _util_ftdi_fini(char *argv[]);
 static int _util_usage(char *argv[]);
 static int _util_options_parse(int argc, char *argv[]);
 static int _util_options_process(char *argv[]);
@@ -105,7 +107,7 @@ static int _jennic_program(char* image)
         return -1;
     }
 
-    jennic_pring_fw_info(pdc->fw_image, &firm);
+    jennic_print_fw_info(pdc->fw_image, &firm);
 
     image_addr = firm.pu8ImageData;
     image_block_num = fstate.st_size/prog_unit_size;
@@ -132,7 +134,6 @@ static int _jennic_program(char* image)
 
 static int _jennic_verify(pstzb_firmware_t pfirm)
 {
-
     return 0;
 }
 
@@ -174,6 +175,21 @@ static int _util_serial_init(char *argv[])
     return 0;
 }
 
+static int _util_serial_fini(char *argv[])
+{
+    _pstmain_dc_t pdc = gpdc;
+    if(0 == strcmp(pdc->platform, "loftq"))
+    {
+        util_loftq_finalize();
+    }
+    else if(0 == strcmp(pdc->platform, "globot"))
+    {
+        util_globot_finalize();
+    }
+
+    return 0;
+}
+
 #ifdef JENNIC_FTDI_ENABLE
 static int _util_ftdi_init(char *argv[])
 {
@@ -204,6 +220,12 @@ static int _util_ftdi_init(char *argv[])
     jennic_select_flash();
     return 0;
 }
+
+static int _util_ftdi_fini(char *argv[])
+{
+    return 0;
+}
+
 #endif
 
 static int _util_usage(char *argv[])
@@ -363,38 +385,9 @@ static int _util_options_parse(int argc, char *argv[])
     return 0;
 }
 
-static int _util_options_process(char *argv[])
+static int _util_common_process(char *argv[])
 {
     _pstmain_dc_t pdc = gpdc;
-
-    if(NULL == pdc->platform || NULL == pdc->connection)
-    {
-        printf("Error: please specify platform or connection! \n");
-        _util_usage(argv);
-    }
-    else
-    {
-        if(0 == strcmp(pdc->connection, "serial"))
-        {
-            _util_serial_init(argv);
-        }
-        #ifdef JENNIC_FTDI_ENABLE
-        else if(0 == strcmp(pdc->connection, "ftdi"))
-        {
-            _util_ftdi_init(argv);
-        }
-        #endif
-        else if(0 == strcmp(pdc->connection, "ipv6"))
-        {
-            printf("Error: ipv6 has not been implemented! \n");
-            _util_usage(argv);
-        }
-        else
-        {
-            printf("Error: %s is not supported on %s ! \n", pdc->connection, pdc->platform);
-            _util_usage(argv);
-        }
-    }
 
     if(1 == pdc->info_flag)
     {
@@ -423,6 +416,45 @@ static int _util_options_process(char *argv[])
         else
         {
             printf("Firmware %s doesn't exists! \n", pdc->firmware);
+            _util_usage(argv);
+        }
+    }
+
+    return 0;
+}
+static int _util_options_process(char *argv[])
+{
+    _pstmain_dc_t pdc = gpdc;
+
+    if(NULL == pdc->platform || NULL == pdc->connection)
+    {
+        printf("Error: please specify platform or connection! \n");
+        _util_usage(argv);
+    }
+    else
+    {
+        if(0 == strcmp(pdc->connection, "serial"))
+        {
+            _util_serial_init(argv);
+            _util_common_process(argv);
+            _util_serial_fini(argv);
+        }
+        #ifdef JENNIC_FTDI_ENABLE
+        else if(0 == strcmp(pdc->connection, "ftdi"))
+        {
+            _util_ftdi_init(argv);
+            _util_common_process(argv);
+            _util_ftdi_fini(argv);
+        }
+        #endif
+        else if(0 == strcmp(pdc->connection, "ipv6"))
+        {
+            printf("Error: ipv6 has not been implemented! \n");
+            _util_usage(argv);
+        }
+        else
+        {
+            printf("Error: %s is not supported on %s ! \n", pdc->connection, pdc->platform);
             _util_usage(argv);
         }
     }

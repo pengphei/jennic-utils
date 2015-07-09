@@ -51,7 +51,7 @@ typedef struct
     u_int8_t     u8TextDataStart;
 } _stheader_v2_t, *_pstheader_v2_t;
 
-int jennic_pring_fw_info(u_int8_t *pfirmware, pstzb_firmware_t pfirm)
+int jennic_print_fw_info(u_int8_t *pfirmware, pstzb_firmware_t pfirm)
 {
     _pstheader_v2_t ph2 = (_pstheader_v2_t)pfirmware;
 
