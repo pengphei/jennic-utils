@@ -18,12 +18,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#if 1
-#define JENNIC_CORE_DEBUG
-#else
-#define JENNIC_CORE_DEBUG printf
-#endif
-
 typedef struct
 {
     unsigned char jennic_id;
@@ -140,7 +134,7 @@ int jennic_identify_flash(_pst_jennic_flash_t pflash)
             *pflash = _unknown_jennic_flash;
         }
 
-        JENNIC_CORE_DEBUG("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor, pflash->type, pflash->jennic_id);
+        printf("jennic: flash vendor: %s, type: %s, jennic_id: 0x%02x \n", pflash->vendor, pflash->type, pflash->jennic_id);
         return 0;
     }
     else
@@ -181,7 +175,7 @@ int jennic_select_flash(void)
         }
     }
 
-    JENNIC_CORE_DEBUG("jennic: could not select detected flash type 0x%02x \n", sbuf);
+    printf("jennic: could not select detected flash type 0x%02x \n", sbuf);
 
     return -1;
 }

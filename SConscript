@@ -24,7 +24,7 @@ src = env.Glob('*.c')
 lib = []
 
 if env["platform"] == "pc":
-    env["CCFLAGS"] = "-Wall -O2 -DJENNIC_FTDI_ENABLE"
+    env["CCFLAGS"] = "-O2 -DJENNIC_FTDI_ENABLE"
     env["LDFLAGS"] = "-static"
     lib = ['ftdi']
 
