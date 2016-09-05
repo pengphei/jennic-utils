@@ -1,4 +1,4 @@
-..image:: https://travis-ci.org/pengphei/jennic-utils.svg?branch=master
+.. image:: https://travis-ci.org/pengphei/jennic-utils.svg?branch=master
 
 About Jennic-ctrl
 ===================
