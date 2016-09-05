@@ -1,3 +1,5 @@
+..image:: https://travis-ci.org/pengphei/jennic-utils.svg?branch=master
+
 About Jennic-ctrl
 ===================
 
@@ -5,6 +7,7 @@ This is the tool for programing flash of NXP Jennic Zigbee Chips.
 
 Building
 -------------------
+
 
 this project is based on scons building tools. and this tool is based on libftdi.
 So what we need to preinstall is as below:
