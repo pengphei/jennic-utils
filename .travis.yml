@@ -1,7 +1,9 @@
-install: libftdi-dev
-language: c
-script: scons
+before_install: 
+	- sudo apt-get install libftdi-dev
+language: 
+	c
+script: 
+	scons
 
 compiler:
-  - clang
-  - gcc
+	- gcc
